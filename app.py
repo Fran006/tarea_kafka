@@ -1,13 +1,13 @@
-import re
 from flask import Flask, request
 from kafka import KafkaConsumer, KafkaProducer
 import json
-
+import threading
 app = Flask(__name__)
 
-consumer = KafkaConsumer('event',
-                         bootstrap_servers=['localhost:9092'],
-                         value_deserializer=lambda m: json.loads(m.decode('ascii')))
+consumer = KafkaConsumer('Orders',
+                        bootstrap_servers=['localhost:9092'],
+                        value_deserializer=lambda m: json.loads(m.decode('ascii')))
+
 producer = KafkaProducer(value_serializer=lambda m: json.dumps(m).encode('ascii'), bootstrap_servers=['localhost:9092'])
 
 
@@ -21,7 +21,7 @@ def produce():
         n_sopaipa = request.form['n_sopaipa']
         mail_vendedor = request.form['mail_vendedor']
         mail_cocinero = request.form['mail_cocinero']
-        producer.send('event', {'numero_sopaipillas':n_sopaipa, 'mail_vendedor':mail_vendedor, 'mail_cocinero':mail_cocinero})
+        producer.send('Orders', {'numero_sopaipillas':n_sopaipa, 'mail_vendedor':mail_vendedor, 'mail_cocinero':mail_cocinero})
         resp = {'numero_sopaipillas':n_sopaipa, 'mail_vendedor':mail_vendedor, 'mail_cocinero':mail_cocinero}
         producer.flush()
         return resp
@@ -29,9 +29,11 @@ def produce():
 @app.route('/consumer', methods=['GET'])
 def consume():
     if request.method=="GET":
+        list = []
         for message in consumer:
-            #print(message.value)
-            return message.value
+            list.append(message.value)
+            print(message.value)
+        return list
 
 
 if __name__ == '__main__':
